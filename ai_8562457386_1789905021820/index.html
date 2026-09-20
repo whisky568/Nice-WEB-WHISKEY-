@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صورة ويسكي</title>
+    <style>
+        /* 
+        *   تأثير خلفية الخشبية
+        */
+        body {
+            background-image: linear-gradient(to bottom, #964B00, #786C3B);
+            background-size: 100% 200px;
+            background-position: 0 100%;
+            animation: move 5s linear infinite;
+        }
+        @keyframes move {
+            0% { background-position: 0 100%; }
+            100% { background-position: 0 0; }
+        }
+
+        /* 
+        *   التصميم الرئيسي
+        */
+        .candle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .candle img {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 2px solid black;
+            box-shadow: 0 0 10px black;
+        }
+        .candle .light {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            top: 150px;
+            left: 50px;
+            border-radius: 50%;
+            background-color: #FFD700;
+        }
+        .candle .bar {
+            position: absolute;
+            top: 200px;
+            left: 50px;
+            width: 100px;
+            height: 50px;
+            background-color: #964B00;
+        }
+        .candle .glassware {
+            position: absolute;
+            top: 250px;
+            left: 50px;
+            width: 50px;
+            height: 50px;
+            background-color: #FFFFFF;
+            border: 1px solid black;
+        }
+        .candle .haze {
+            position: absolute;
+            top: 300px;
+            left: 50px;
+            width: 100px;
+            height: 50px;
+            background-color: #C0C0C0;
+            opacity: 0.5;
+        }
+        .candle .depth-of-field {
+            position: absolute;
+            top: 350px;
+            left: 50px;
+            width: 100px;
+            height: 50px;
+            background-color: #FFFFFF;
+            opacity: 0.5;
+        }
+
+        /* 
+        *   تأثير الضوء
+        */
+        .light {
+            background-color: #FFD700;
+        }
+
+        /* 
+        *   لون الخشب
+        */
+        .bar {
+            background-color: #964B00;
+        }
+
+        /* 
+        *   لون الزجاج
+        */
+        .glassware {
+            background-color: #FFFFFF;
+            border: 1px solid black;
+        }
+
+        /* 
+        *   لون الغبار
+        */
+        .haze {
+            background-color: #C0C0C0;
+            opacity: 0.5;
+        }
+
+        /* 
+        *   تأثير عمود الخشب
+        */
+        .bar {
+            border-radius: 10px;
+        }
+    </style>
+    <script>
+        // تأثير الضوء
+        function animateLight() {
+            var light = document.querySelector('.light');
+            light.style.width = '50px';
+            light.style.height = '50px';
+            setTimeout(function() {
+                light.style.width = '20px';
+                light.style.height = '20px';
+            }, 1000);
+            setTimeout(animateLight, 2000);
+        }
+
+        animateLight();
+    </script>
+</head>
+<body>
+    <div class="candle">
+        <img src="candle.png">
+        <div class="light"></div>
+        <div class="bar"></div>
+        <div class="glassware"></div>
+        <div class="haze"></div>
+        <div class="depth-of-field"></div>
+    </div>
+</body>
+</html>
