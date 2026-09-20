@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صورة أنمي</title>
+    <style>
+        /* 
+        *   تأثير خلفية السماء
+        */
+        body {
+            background-image: linear-gradient(to bottom, #87CEEB, #4682B4);
+            background-size: 100% 200px;
+            background-position: 0 100%;
+            animation: move 5s linear infinite;
+        }
+        @keyframes move {
+            0% { background-position: 0 100%; }
+            100% { background-position: 0 0; }
+        }
+
+        /* 
+        *   التصميم الرئيسي
+        */
+        .character {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .character img {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 2px solid black;
+            box-shadow: 0 0 10px black;
+        }
+        .character .eyes {
+            position: relative;
+            width: 100px;
+            height: 50px;
+            top: 70px;
+            left: 50px;
+        }
+        .character .eyes .eye {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: blue;
+        }
+        .character .eyes .left-eye {
+            left: 0;
+        }
+        .character .eyes .right-eye {
+            right: 0;
+        }
+        .character .mouth {
+            position: relative;
+            width: 50px;
+            height: 20px;
+            top: 120px;
+            left: 50px;
+            border-radius: 50%;
+            background-color: black;
+        }
+        .character .arms {
+            position: absolute;
+            top: 120px;
+            left: 50px;
+        }
+        .character .arm.left {
+            transform: rotate(45deg);
+            left: 0;
+        }
+        .character .arm.right {
+            transform: rotate(-45deg);
+            right: 0;
+        }
+        .character .legs {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .character .leg.left {
+            transform: rotate(45deg);
+            left: 0;
+        }
+        .character .leg.right {
+            transform: rotate(-45deg);
+            right: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="character">
+        <img src="character.png">
+        <div class="eyes">
+            <div class="eye left-eye"></div>
+            <div class="eye right-eye"></div>
+        </div>
+        <div class="mouth"></div>
+        <div class="arms">
+            <div class="arm left"></div>
+            <div class="arm right"></div>
+        </div>
+        <div class="legs">
+            <div class="leg left"></div>
+            <div class="leg right"></div>
+        </div>
+    </div>
+</body>
+</html>
